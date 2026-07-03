@@ -1,24 +1,22 @@
 """
 ArXiv academic paper search tool.
 
-Searches the ArXiv preprint repository for academic papers.
+Queries the ArXiv preprint API directly using XML parsing.
 Best for scientific, mathematical, and technical research queries.
-No API key required.
+No heavy third-party library wrappers, ensuring robust timeouts.
 """
 
 import logging
-import socket
+import urllib.parse
+import xml.etree.ElementTree as ET
 
-import arxiv
+import requests
 
 from agent.config import Config
 from agent.models import SearchResult, SourceType
 from tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
-
-# Set default socket timeout to prevent slow academic repository endpoints from hanging the app
-socket.setdefaulttimeout(10.0)
 
 
 class ArxivTool(BaseTool):
@@ -38,31 +36,60 @@ class ArxivTool(BaseTool):
         )
 
     def execute(self, query: str) -> list[SearchResult]:
-        """Search ArXiv for academic papers matching the query."""
+        """Search ArXiv using native API request and XML parsing."""
         results = []
         try:
-            client = arxiv.Client()
-            search = arxiv.Search(
-                query=query,
-                max_results=Config.MAX_RESULTS_PER_TOOL,
-                sort_by=arxiv.SortCriterion.Relevance,
+            # URL encode search query
+            safe_query = urllib.parse.quote(query)
+            url = (
+                f"https://export.arxiv.org/api/query?"
+                f"search_query=all:{safe_query}&"
+                f"max_results={Config.MAX_RESULTS_PER_TOOL}&"
+                f"sortBy=relevance&"
+                f"sortOrder=descending"
             )
 
-            for paper in client.results(search):
-                # Build a rich content string from paper metadata
-                authors = ", ".join(a.name for a in paper.authors[:5])
-                if len(paper.authors) > 5:
-                    authors += f" and {len(paper.authors) - 5} others"
+            # Strict 5-second timeout to prevent slowing down pipeline runs
+            response = requests.get(url, timeout=5.0)
+            
+            if response.status_code != 200:
+                logger.warning(f"ArXiv API returned status {response.status_code}")
+                return results
 
-                categories = ", ".join(paper.categories)
-                published = paper.published.strftime("%Y-%m-%d") if paper.published else "N/A"
+            # Parse Atom XML feed
+            root = ET.fromstring(response.content)
+            
+            # Atom namespace
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            
+            entries = root.findall("atom:entry", ns)
+            for entry in entries:
+                title_elem = entry.find("atom:title", ns)
+                summary_elem = entry.find("atom:summary", ns)
+                id_elem = entry.find("atom:id", ns)
+                pub_elem = entry.find("atom:published", ns)
+                
+                title = title_elem.text.strip().replace("\n", " ") if title_elem is not None else "Untitled"
+                summary = summary_elem.text.strip().replace("\n", " ") if summary_elem is not None else ""
+                entry_id = id_elem.text.strip() if id_elem is not None else ""
+                published = pub_elem.text.strip()[:10] if pub_elem is not None else "N/A"
+                
+                # Extract author names
+                authors = []
+                for author_elem in entry.findall("atom:author", ns):
+                    name_elem = author_elem.find("atom:name", ns)
+                    if name_elem is not None:
+                        authors.append(name_elem.text.strip())
+                        
+                authors_str = ", ".join(authors[:5])
+                if len(authors) > 5:
+                    authors_str += f" and {len(authors) - 5} others"
 
                 content = (
-                    f"Title: {paper.title}\n"
-                    f"Authors: {authors}\n"
+                    f"Title: {title}\n"
+                    f"Authors: {authors_str}\n"
                     f"Published: {published}\n"
-                    f"Categories: {categories}\n"
-                    f"Abstract: {paper.summary}\n"
+                    f"Abstract: {summary}\n"
                 )
 
                 if len(content) > Config.MAX_CONTENT_LENGTH:
@@ -70,17 +97,17 @@ class ArxivTool(BaseTool):
 
                 results.append(
                     SearchResult(
-                        title=paper.title,
-                        url=paper.entry_id,
-                        snippet=paper.summary[:500],
+                        title=title,
+                        url=entry_id,
+                        snippet=summary[:500],
                         source_type=SourceType.ARXIV,
                         raw_content=content,
                     )
                 )
 
-            logger.info(f"ArXiv: Found {len(results)} papers for '{query}'")
+            logger.info(f"ArXiv API: Found {len(results)} papers for '{query}'")
 
         except Exception as e:
-            logger.error(f"ArXiv error for '{query}': {e}")
+            logger.warning(f"ArXiv connection bypassed (timeout or API load): {e}")
 
         return results

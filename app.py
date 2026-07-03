@@ -299,9 +299,10 @@ if report:
     """, unsafe_allow_html=True)
 
     # Clean, Segmented Output Tabs to avoid clashing information
-    tab_summary, tab_findings, tab_insights, tab_analysis, tab_sources = st.tabs([
+    tab_summary, tab_findings, tab_analysis, tab_detailed_findings, tab_insights, tab_sources = st.tabs([
         "📖 Executive Summary",
         "🔑 Key Takeaways",
+        "📝 Detailed Analysis",
         "🔬 Detailed Findings",
         "💡 Actionable Steps",
         "📚 References & Logs"
@@ -324,8 +325,16 @@ if report:
         else:
             st.info("No primary bullet points provided.")
 
-    # Tab 3: Detailed Findings
-    with tab_insights:
+    # Tab 3: Detailed Analysis
+    with tab_analysis:
+        st.markdown('<div class="section-title">📝 Comprehensive Analysis</div>', unsafe_allow_html=True)
+        if report.detailed_analysis:
+            st.markdown(f"<div style='font-size: 1.1rem; line-height: 1.8; color: #d1d5db;'>{report.detailed_analysis}</div>", unsafe_allow_html=True)
+        else:
+            st.info("No comprehensive detailed analysis compiled.")
+
+    # Tab 4: Detailed Findings
+    with tab_detailed_findings:
         st.markdown('<div class="section-title">🔬 Detailed Findings</div>', unsafe_allow_html=True)
         if report.important_findings:
             for finding in report.important_findings:
@@ -333,8 +342,8 @@ if report:
         else:
             st.info("No detailed analytical components found.")
 
-    # Tab 4: Actionable Steps
-    with tab_analysis:
+    # Tab 5: Actionable Steps
+    with tab_insights:
         st.markdown('<div class="section-title">💡 Actionable Recommendations</div>', unsafe_allow_html=True)
         if report.actionable_insights:
             for insight in report.actionable_insights:

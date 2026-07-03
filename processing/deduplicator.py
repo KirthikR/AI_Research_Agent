@@ -1,7 +1,7 @@
 """
 LLM-powered content deduplication and relevance filtering.
 
-Uses the Gemini LLM to semantically identify duplicate information
+Uses the LLM to semantically identify duplicate information
 and filter out irrelevant content — no hardcoded rules.
 """
 

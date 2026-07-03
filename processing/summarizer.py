@@ -1,7 +1,7 @@
 """
 LLM-powered structured summary generator.
 
-Uses the Gemini LLM to synthesize all gathered content into
+Uses the LLM to synthesize all gathered content into
 a structured research report with key points, findings,
 actionable insights, and references.
 """
