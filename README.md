@@ -1,4 +1,4 @@
-# 🔬 Autonomous AI Research Agent
+# 🔬 Kirthik AI Research Agent
 
 An autonomous AI agent that accepts a user query, **autonomously selects the best information sources**, gathers data in parallel, deduplicates and filters content, and generates a **structured, actionable research report** — all powered by LLM reasoning with **zero hardcoded rules**.
 
@@ -11,7 +11,7 @@ An autonomous AI agent that accepts a user query, **autonomously selects the bes
 | 🔍 **5 Search Tools** | Web Search, Wikipedia, ArXiv, News, URL Scraping |
 | 🔎 **LLM Deduplication** | Semantic duplicate detection and relevance filtering |
 | 📝 **Structured Reports** | Key Points, Findings, Actionable Insights, References |
-| 📄 **Export: PDF & Markdown** | Professional report export in multiple formats |
+| 📄 **Export: PDF** | Professional corporate article report export |
 | 💾 **Memory Store** | SQLite-based search history for past research |
 | 🌐 **Web UI + CLI** | Beautiful Streamlit interface and command-line tool |
 | 🔄 **Follow-up Research** | LLM evaluates if additional searches are needed |
@@ -19,7 +19,7 @@ An autonomous AI agent that accepts a user query, **autonomously selects the bes
 ## 🏗️ Architecture
 
 ```
-User Query → LLM Source Selection → Parallel Gathering → Extraction → LLM Dedup → LLM Summary → Report
+User Query → LLM Source Selection → Parallel Gathering → Extraction → LLM Dedup → LLM Summary → PDF Report
 ```
 
 ```
@@ -33,8 +33,8 @@ AI_research_agent/
 │   └── models.py           # Data models
 ├── tools/
 │   ├── web_search.py       # DuckDuckGo search
-│   ├── wikipedia_tool.py   # Wikipedia API
-│   ├── arxiv_tool.py       # ArXiv papers
+│   ├── wikipedia_tool.py   # Wikipedia API (keyless)
+│   ├── arxiv_tool.py       # ArXiv XML API (keyless)
 │   ├── news_search.py      # News search
 │   └── web_scraper.py      # URL scraping
 ├── processing/
@@ -42,7 +42,6 @@ AI_research_agent/
 │   ├── deduplicator.py     # LLM deduplication
 │   └── summarizer.py       # Summary generation
 ├── export/
-│   ├── markdown_export.py  # Markdown export
 │   └── pdf_export.py       # PDF export
 ├── memory/
 │   └── store.py            # SQLite memory
@@ -55,6 +54,7 @@ AI_research_agent/
 
 - Python 3.10 or higher
 - A **Groq API key** (free at https://console.groq.com/keys)
+- *Note:* Wikipedia, ArXiv, DuckDuckGo, and News searches do NOT require any API keys. Only the Groq LLM client requires a key.
 
 ### 2. Install Dependencies
 
@@ -109,11 +109,8 @@ python main.py --interactive
 ### CLI
 
 ```bash
-# Single query with both exports
-python main.py "Impact of AI on healthcare" --export both
-
-# Only Markdown export
-python main.py "Climate change solutions" --export md
+# Run a query (automatically saves a PDF report in outputs/)
+python main.py "Impact of AI on healthcare"
 
 # Interactive mode
 python main.py -i
@@ -181,13 +178,29 @@ The LLM synthesizes all gathered content into:
 
 - **LLM**: Groq (via `groq` client)
 - **Web Search**: DuckDuckGo (free, no API key)
-- **Wikipedia**: `wikipedia-api`
-- **Academic**: `arxiv` Python client
-- **Scraping**: `requests` + `BeautifulSoup4`
+- **Wikipedia**: `wikipedia-api` (free, no API key, with search-fallback)
+- **Academic**: ArXiv XML API (free, no API key, direct XML requests)
+- **Scraping**: `requests` + `BeautifulSoup4` (free, no API key)
 - **PDF**: `fpdf2`
 - **UI**: `Streamlit`
 - **Memory**: `SQLite`
 - **Data Models**: `Pydantic`
+
+## 🔮 Future Development Roadmap
+
+To transition this research prototype to a production-scale enterprise platform, the following architectural upgrades are proposed:
+
+1. **Multi-Agent Critique & Fact-Verification Loop:**
+   - Implement a Creator-Auditor model pattern where a secondary "Reviewer" agent audits the generated report's claims against the retrieved raw sources, highlighting and correcting any potential LLM hallucinations before final compilation.
+
+2. **Semantic Chunking & Dense Retrieval (Vector RAG):**
+   - Upgrade from character-based text truncation to semantic sentence-boundary chunking using local embeddings (e.g., HuggingFace transformers) and a vector database (e.g., ChromaDB/FAISS) to perform high-precision hybrid lexical/semantic queries.
+
+3. **Adaptive Token-Bucket Rate Limiting & Proxy Rotation:**
+   - Integrate token-bucket queue controllers dynamically tuned to individual source limits (Wikipedia API thresholds, Groq API RPM/TPM), combined with proxy rotation, to scale web scraping operations without IP bans.
+
+4. **Distributed Memory & Multi-Tenant State Management:**
+   - Migrate the local SQLite transaction logs to a distributed Redis cache / PostgreSQL backend to support state persistence, concurrent user workspace collaborations, and multi-tenant search history retrieval.
 
 ## 📝 License
 
