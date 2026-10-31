@@ -1,4 +1,4 @@
-# 🔬 Kirthik AI Research Agent
+# 🔬 AI Research Agent
 
 An autonomous AI agent that accepts a user query, **autonomously selects the best information sources**, gathers data in parallel, deduplicates and filters content, and generates a **structured, actionable research report** — all powered by LLM reasoning with **zero hardcoded rules**.
 
